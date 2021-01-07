@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,6 +11,7 @@ namespace SnakeGame
 
         public Color color1;
         public Color color2;
+        public Color appleColor = Color.red;
         public Color playerColor = Color.black;
 
         public Transform cameraHolder;
@@ -20,12 +20,18 @@ namespace SnakeGame
         private SpriteRenderer mapRenderer;
 
         private GameObject playerObj;
+        private GameObject appleObj;
         private Node playerNode;
+        private Node appleNode;
 
         private Node[,] grid;
+        private List<Node> availableNodes = new List<Node>();
 
         private bool up, left, right, down;
-        private bool movePlayer;
+
+        public float moveRate = 0.5f;
+        private float timer;
+        
         private Direction currentDirection;
         public enum Direction
         {
@@ -40,7 +46,9 @@ namespace SnakeGame
         {
             CreateMap();
             PlacePlayer();
+            CreateApple();
             PlaceCamera();
+            currentDirection = Direction.Right;
         }
 
         #region INIT
@@ -68,6 +76,7 @@ namespace SnakeGame
                         worldPosition = gridPos
                     };
                     grid[x, y] = n;
+                    availableNodes.Add(n);
                     
                     #region VISUAL
                     if (x % 2 != 0)
@@ -122,6 +131,15 @@ namespace SnakeGame
 
             cameraHolder.position = p;
         }
+
+        private void CreateApple()
+        {
+            appleObj = new GameObject("Apple");
+            SpriteRenderer appleRenderer = appleObj.AddComponent<SpriteRenderer>();
+            appleRenderer.sprite = CreateSprite(appleColor);
+            appleRenderer.sortingOrder = 1;
+            RandomlyPlaceApple();
+        }
         #endregion
 
         #region UPDATE
@@ -129,7 +147,14 @@ namespace SnakeGame
         {
             GetInput();
             SetPlayerDirection();
-            MovePlayer();
+
+            timer += Time.deltaTime;
+            if (timer > moveRate)
+            {
+                timer = 0.0f;
+                MovePlayer();
+            }
+            
         }
         
         private void GetInput()
@@ -145,32 +170,23 @@ namespace SnakeGame
             if (up)
             {
                 currentDirection = Direction.Up;
-                movePlayer = true;
             }
             else if (down)
             {
                 currentDirection = Direction.Down;
-                movePlayer = true;
             }
             else if (left)
             {
                 currentDirection = Direction.Left;
-                movePlayer = true;
             }
             else if (right)
             {
                 currentDirection = Direction.Right;
-                movePlayer = true;
             }
         }
 
         private void MovePlayer()
         {
-            if(!movePlayer)
-                return;
-            
-            movePlayer = false;
-            
             int x = 0;
             int y = 0;
             
@@ -197,8 +213,37 @@ namespace SnakeGame
             }
             else
             {
+                bool isScore = false;
+                
+                if (targetNode == appleNode)
+                {
+                    // You've Scored
+                    isScore = true;
+                    
+                    if (availableNodes.Count == 0)
+                    {
+                        // You've Won!
+                    }
+                }
+
+                availableNodes.Add(playerNode);
                 playerObj.transform.position = targetNode.worldPosition;
                 playerNode = targetNode;
+                availableNodes.Remove(playerNode);
+
+                //Move Tail
+                
+                if (isScore)
+                {
+                    if (availableNodes.Count > 0)
+                    {
+                        RandomlyPlaceApple();
+                    }
+                    else
+                    {
+                        // You've Won!
+                    }
+                }
             }
         }
         #endregion
@@ -221,6 +266,14 @@ namespace SnakeGame
             txt.filterMode = FilterMode.Point;
             Rect rect = new Rect(0, 0, 1, 1);
             return Sprite.Create(txt, rect, Vector2.zero, 1, 0, SpriteMeshType.FullRect);
+        }
+
+        private void RandomlyPlaceApple()
+        {
+            int random = Random.Range(0, availableNodes.Count);
+            Node n = availableNodes[random];
+            appleObj.transform.position = n.worldPosition;
+            appleNode = n;
         }
         #endregion
     }

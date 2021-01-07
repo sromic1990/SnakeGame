@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,20 +14,36 @@ namespace SnakeGame
         public Color color2;
         public Color playerColor = Color.black;
 
+        public Transform cameraHolder;
+        
         private GameObject mapObject;
         private SpriteRenderer mapRenderer;
 
         private GameObject playerObj;
+        private Node playerNode;
 
         private Node[,] grid;
+
+        private bool up, left, right, down;
+        private bool movePlayer;
+        private Direction currentDirection;
+        public enum Direction
+        {
+            Up,
+            Down,
+            Left,
+            Right
+        }
         
         // Start is called before the first frame update
         private void Start()
         {
             CreateMap();
             PlacePlayer();
+            PlaceCamera();
         }
 
+        #region INIT
         private void CreateMap()
         {
             mapObject = new GameObject("Map");
@@ -82,7 +99,7 @@ namespace SnakeGame
             txt.filterMode = FilterMode.Point;
             txt.Apply();
             Rect rect = new Rect(0, 0, maxWidth, maxHeight);
-            Sprite sprite = Sprite.Create(txt, rect, Vector2.one * 0.5f, 1, 0, SpriteMeshType.FullRect);
+            Sprite sprite = Sprite.Create(txt, rect, Vector2.zero, 1, 0, SpriteMeshType.FullRect);
             mapRenderer.sprite = sprite;
         }
 
@@ -93,9 +110,100 @@ namespace SnakeGame
             playerRender.sprite = CreateSprite(playerColor);
             playerRender.sortingOrder = 1;
 
-            playerObj.transform.position = GetNode(3, 3).worldPosition;
+            playerNode = GetNode(3, 3);
+            playerObj.transform.position = playerNode.worldPosition;
         }
 
+        private void PlaceCamera()
+        {
+            Node n = GetNode(maxWidth / 2, maxHeight / 2);
+            Vector3 p = n.worldPosition;
+            p += Vector3.one * 0.5f;
+
+            cameraHolder.position = p;
+        }
+        #endregion
+
+        #region UPDATE
+        private void Update()
+        {
+            GetInput();
+            SetPlayerDirection();
+            MovePlayer();
+        }
+        
+        private void GetInput()
+        {
+            up = Input.GetButtonDown("Up");
+            down = Input.GetButtonDown("Down");
+            left = Input.GetButtonDown("Left");
+            right = Input.GetButtonDown("Right");
+        }
+
+        private void SetPlayerDirection()
+        {
+            if (up)
+            {
+                currentDirection = Direction.Up;
+                movePlayer = true;
+            }
+            else if (down)
+            {
+                currentDirection = Direction.Down;
+                movePlayer = true;
+            }
+            else if (left)
+            {
+                currentDirection = Direction.Left;
+                movePlayer = true;
+            }
+            else if (right)
+            {
+                currentDirection = Direction.Right;
+                movePlayer = true;
+            }
+        }
+
+        private void MovePlayer()
+        {
+            if(!movePlayer)
+                return;
+            
+            movePlayer = false;
+            
+            int x = 0;
+            int y = 0;
+            
+            switch (currentDirection)
+            {
+                case Direction.Up:
+                    y = 1;
+                    break;
+                case Direction.Down:
+                    y = -1;
+                    break;
+                case Direction.Left:
+                    x = -1;
+                    break;
+                case Direction.Right:
+                    x = 1;
+                    break;
+            }
+
+            Node targetNode = GetNode(playerNode.x + x, playerNode.y + y);
+            if (targetNode == null)
+            {
+                //Game Over
+            }
+            else
+            {
+                playerObj.transform.position = targetNode.worldPosition;
+                playerNode = targetNode;
+            }
+        }
+        #endregion
+        
+        #region UTILITIES
         private Node GetNode(int x, int y)
         {
             if (x < 0 || x > maxWidth - 1 || y < 0 || y > maxHeight - 1)
@@ -112,7 +220,8 @@ namespace SnakeGame
             txt.Apply();
             txt.filterMode = FilterMode.Point;
             Rect rect = new Rect(0, 0, 1, 1);
-            return Sprite.Create(txt, rect, Vector2.one * 0.5f, 1, 0, SpriteMeshType.FullRect);
+            return Sprite.Create(txt, rect, Vector2.zero, 1, 0, SpriteMeshType.FullRect);
         }
+        #endregion
     }
 }
